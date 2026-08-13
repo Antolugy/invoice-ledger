@@ -20,7 +20,7 @@ Everything runs locally: the generator uses your browser's local storage; the le
 
 **Two ways to use it — both are the complete tool, and neither needs installing:**
 
-1. **Use it online (easiest):** open the live link — <!-- add your GitHub Pages URL here, e.g. https://your-username.github.io/your-repo/invoice-generator.html --> — and it runs straight in your browser. Best if you want your saved details and invoice library to persist reliably.
+1. **Use it online (easiest):** open the live link — **https://antolugy.github.io/invoice-ledger/invoice-generator.html** — and it runs straight in your browser. Best if you want your saved details and invoice library to persist reliably.
 2. **Download and use offline:** grab `invoice-generator.html` from the repo (green **Code → Download ZIP**, or open the file and download it) and double-click it to open in any browser. Fully offline, and it's your own permanent copy.
 
 One thing to know: the generator remembers your business details and past invoices in **your browser**, and each way of opening it keeps its *own* separate store — so pick one way and stick with it, and your invoices stay put.
