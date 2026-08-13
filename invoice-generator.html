@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Invoice Generator</title>
+<style>
+  :root{--navy:#1F3864;--line:#d0d5dd;--muted:#667085;--ink:#101828;--soft:#f8f9fb;}
+  *{box-sizing:border-box}
+  body{margin:0;background:#e9ecf1;font-family:Arial,Helvetica,sans-serif;color:var(--ink);
+    -webkit-print-color-adjust:exact;print-color-adjust:exact;}
+  .toolbar{position:sticky;top:0;z-index:20;background:var(--navy);color:#fff;
+    display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:10px 16px;}
+  .toolbar h1{font-size:15px;margin:0 auto 0 0;font-weight:700;letter-spacing:.3px}
+  .toolbar button, .toolbar select{font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;
+    border:0;border-radius:6px;padding:8px 12px;}
+  .toolbar select{background:#fff;color:var(--navy);max-width:260px}
+  .btn-primary{background:#fff;color:var(--navy)}
+  .btn-ghost{background:rgba(255,255,255,.15);color:#fff}
+  .btn-ghost:hover{background:rgba(255,255,255,.28)}
+  .hint{font-size:11px;color:rgba(255,255,255,.75);width:100%;margin-top:2px}
+
+  .page{background:#fff;width:210mm;min-height:297mm;margin:22px auto;padding:20mm 18mm;
+    box-shadow:0 4px 24px rgba(16,24,40,.12);}
+  [contenteditable], input.f{outline:none;border:1px solid transparent;border-radius:4px;
+    transition:background .1s,border-color .1s;font-family:inherit;font-size:inherit;color:inherit;}
+  [contenteditable]:hover, input.f:hover{background:#f2f5fb}
+  [contenteditable]:focus, input.f:focus{background:#fff;border-color:var(--navy);box-shadow:0 0 0 2px rgba(31,56,100,.12);}
+  input.f{padding:2px 4px;background:transparent}
+
+  .top{display:flex;justify-content:space-between;gap:24px;align-items:flex-start}
+  .brand{max-width:60%}
+  .logo-wrap{display:flex;align-items:center;gap:12px;margin-bottom:8px}
+  #logoImg{max-height:64px;max-width:200px;display:none}
+  .logo-btn{font-size:11px;color:var(--muted);border:1px dashed var(--line);border-radius:6px;
+    padding:6px 10px;cursor:pointer;background:var(--soft);}
+  .biz-name{font-size:20px;font-weight:700;color:var(--navy)}
+  .biz-lines{font-size:12px;color:var(--muted);line-height:1.5;margin-top:4px;white-space:pre-wrap}
+  .invoice-meta{text-align:right;min-width:230px}
+  .invoice-word{font-size:34px;font-weight:800;color:var(--navy);letter-spacing:1px;line-height:1}
+  .meta-grid{margin-top:14px;display:grid;grid-template-columns:auto auto;gap:4px 10px;font-size:12px;justify-content:end}
+  .meta-grid .lbl{color:var(--muted);text-align:right;padding-top:3px}
+  .meta-grid input.f{text-align:right;min-width:110px}
+
+  .parties{display:flex;gap:40px;margin-top:34px}
+  .party .cap{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:6px}
+  .party .name{font-weight:700;font-size:14px}
+  .party .addr{font-size:12px;color:var(--muted);line-height:1.5;margin-top:2px;white-space:pre-wrap;min-height:1em}
+
+  table.items{width:100%;border-collapse:collapse;margin-top:30px;font-size:12.5px}
+  table.items thead th{background:var(--navy);color:#fff;font-weight:600;text-align:left;
+    padding:9px 10px;font-size:11px;letter-spacing:.4px;text-transform:uppercase;}
+  table.items thead th.num{text-align:right}
+  table.items tbody td{border-bottom:1px solid var(--line);padding:8px 10px;vertical-align:top}
+  table.items tbody td.num{text-align:right;white-space:nowrap}
+  table.items input.f{width:100%}
+  table.items input.num{text-align:right}
+  table.items td.amtcell{display:flex;align-items:center;justify-content:flex-end;gap:3px}
+  table.items td.amtcell input{width:auto;max-width:110px}
+  .cur-sym{color:var(--muted)}
+  .desc-main{font-weight:600}
+  .row-del{color:#b42318;cursor:pointer;border:0;background:none;font-size:15px;line-height:1;padding:0 2px;visibility:hidden;}
+  tr:hover .row-del{visibility:visible}
+  .add-row{margin-top:10px;font-size:12px;font-weight:600;color:var(--navy);background:var(--soft);
+    border:1px dashed var(--line);border-radius:6px;padding:8px 12px;cursor:pointer;}
+
+  .totals{display:flex;justify-content:flex-end;margin-top:18px}
+  .totals table{font-size:13px;min-width:280px}
+  .totals td{padding:6px 4px}
+  .totals td.lbl{color:var(--muted);text-align:right;padding-right:18px}
+  .totals td.val{text-align:right;white-space:nowrap;min-width:110px}
+  .totals tr.grand td{border-top:2px solid var(--navy);font-size:16px;font-weight:800;color:var(--navy);padding-top:10px}
+  .vat-input{width:46px;text-align:right}
+
+  .footer{margin-top:40px;display:flex;gap:40px}
+  .footer .block{flex:1}
+  .footer .cap{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:6px}
+  .footer .body{font-size:12px;color:var(--muted);line-height:1.6;white-space:pre-wrap;min-height:1em}
+  .thanks{margin-top:34px;text-align:center;font-size:12px;color:var(--muted)}
+
+  @media print{
+    body{background:#fff}
+    .toolbar{display:none !important}
+    .page{width:auto;min-height:auto;margin:0;padding:14mm 14mm;box-shadow:none}
+    [contenteditable]:hover, input.f:hover,[contenteditable]:focus, input.f:focus{background:transparent;border-color:transparent;box-shadow:none}
+    .add-row,.row-del,.logo-btn{display:none !important}
+    table.items tbody td{border-bottom:1px solid #e3e6ec}
+    @page{size:A4;margin:0}
+  }
+</style>
+</head>
+<body>
+
+<div class="toolbar">
+  <h1>Invoice Generator</h1>
+  <select id="dupFrom" onchange="duplicateFrom(this.value)">
+    <option value="">Duplicate from previous…</option>
+  </select>
+  <select id="currency" onchange="recalc()" title="Invoice currency">
+    <option value="EUR">€ EUR</option>
+    <option value="GBP">£ GBP</option>
+    <option value="USD">$ USD</option>
+  </select>
+  <button class="btn-ghost" onclick="addRow()">+ Add line</button>
+  <button class="btn-ghost" onclick="saveInvoice()">Save this invoice</button>
+  <button class="btn-ghost" onclick="saveDetails()">Save my details</button>
+  <button class="btn-ghost" onclick="blankInvoice()">Blank invoice</button>
+  <button class="btn-primary" onclick="exportPDF()">Export PDF</button>
+  <div class="hint">Pick an invoice from "Duplicate from previous…" to start from real data, then edit. Click any text to edit. "Save this invoice" adds it to your library. "Export PDF" → choose "Save as PDF".</div>
+</div>
+
+<div class="page">
+  <div class="top">
+    <div class="brand">
+      <div class="logo-wrap">
+        <img id="logoImg" alt="logo">
+        <label class="logo-btn">Add logo<input type="file" accept="image/*" id="logoInput" hidden></label>
+      </div>
+      <div class="biz-name" contenteditable data-k="bizName">Your Business Name</div>
+      <div class="biz-lines" contenteditable data-k="bizLines">Your address line 1
+City, Postcode, Country
+Email: you@example.com
+VAT / Tax ID: —</div>
+    </div>
+    <div class="invoice-meta">
+      <div class="invoice-word">INVOICE</div>
+      <div class="meta-grid">
+        <div class="lbl">Invoice #</div><input class="f" id="invNo" value="">
+        <div class="lbl">Issue date</div><input class="f" id="issueDate" value="">
+        <div class="lbl">Due date</div><input class="f" id="dueDate" value="">
+      </div>
+    </div>
+  </div>
+
+  <div class="parties">
+    <div class="party" style="flex:1">
+      <div class="cap">Bill to</div>
+      <div class="name" id="billName" contenteditable>Client name</div>
+      <div class="addr" id="billAddr" contenteditable>Client address
+City, Postcode, Country</div>
+    </div>
+  </div>
+
+  <table class="items">
+    <thead>
+      <tr>
+        <th style="width:78%">Description</th>
+        <th class="num" style="width:18%">Amount</th>
+        <th style="width:4%"></th>
+      </tr>
+    </thead>
+    <tbody id="itemsBody"></tbody>
+  </table>
+  <button class="add-row" onclick="addRow()">+ Add line item</button>
+
+  <div class="totals">
+    <table>
+      <tr class="grand"><td class="lbl">Total</td><td class="val" id="grandTotal">€0,00</td></tr>
+    </table>
+  </div>
+
+  <div class="footer">
+    <div class="block">
+      <div class="cap">Payment details</div>
+      <div class="body" id="payDetails" contenteditable>Bank / IBAN / BIC — enter payment details for this client</div>
+    </div>
+  </div>
+  <div class="thanks" contenteditable>Please reference the invoice number with your payment.</div>
+</div>
+
+<script>
+const CURR = {EUR:{s:'€',loc:'de-DE'}, GBP:{s:'£',loc:'en-GB'}, USD:{s:'$',loc:'en-US'}};
+function fmt(n, code){ const c=CURR[code]||CURR.EUR; return c.s + new Intl.NumberFormat(c.loc,{minimumFractionDigits:2,maximumFractionDigits:2}).format(isFinite(n)?n:0); }
+function curCode(){ const el=document.getElementById('currency'); return (el&&el.value)||'EUR'; }
+function curSymbol(){ return (CURR[curCode()]||CURR.EUR).s; }
+function money(n){ return fmt(n, curCode()); }
+function applyCurrencySymbols(){ const s=curSymbol(); document.querySelectorAll('#itemsBody .cur-sym').forEach(el=>el.textContent=s); }
+const parseNum = s => {
+  s = String(s).trim().replace(/\s/g,'').replace(/[€£$]/g,'');
+  if(s.indexOf(',')>-1){ s = s.replace(/\./g,'').replace(',','.'); } // European: dot=thousands, comma=decimal
+  const v = parseFloat(s); return isFinite(v)?v:0;                    // otherwise dot=decimal (e.g. seed 700.04)
+};
+
+/* ---------- seed: one sample invoice (delete or duplicate it) ---------- */
+const ADDR = {
+  "Acme Corp":"123 Example Street\nSample City, 00000\nCountry",
+};
+
+/* ---------- payment details by client country ---------- */
+const UK_PAY = "Bank details (UK / GBP example)\n\n"+
+  "Account holder: Your Name\nSort code: 00-00-00\nAccount number: 00000000\n"+
+  "IBAN: GB00 0000 0000 0000 0000 00\nBIC: —";
+const US_PAY = "Bank details (US / USD example)\n\n"+
+  "Account holder: Your Name\nRouting number: 000000000\n"+
+  "Account number: 000000000\nAccount type: Checking";
+const CLIENT_PAY = {
+  // "Client Name": UK_PAY / US_PAY  — optional per-client override
+};
+// fall back to country inferred from the bill-to address (for clients not in the map)
+function payFromAddress(addr){
+  const a=(addr||'').toLowerCase();
+  if(a.includes('united kingdom')) return UK_PAY;
+  if(a.includes('united states')||a.includes('usa')) return US_PAY;
+  return '';
+}
+const SEED = [
+  ["012026","Acme Corp","15/01/2026",1000.00],
+];
+function seedToInvoice(s){
+  return {invNo:s[0], client:s[1], billAddr:ADDR[s[1]]||'', currency:'EUR', issueDate:s[2], dueDate:'',
+    items:[{desc:'Consulting services', amount:String(s[3])}],
+    payDetails:CLIENT_PAY[s[1]]||''};
+}
+
+/* ---------- library storage ---------- */
+const SEED_VERSION = 4;   // bump when SEED changes so existing files re-seed
+function getLibrary(){
+  let stored, ver;
+  try{ stored=JSON.parse(localStorage.getItem('invoiceLibrary')||'null'); ver=parseInt(localStorage.getItem('invoiceLibraryVersion')||'0',10); }
+  catch(e){ stored=null; ver=0; }
+  if(!stored || ver<SEED_VERSION){
+    const seededNos = new Set(SEED.map(s=>s[0]));
+    const userAdded = (stored||[]).filter(inv=>!seededNos.has(inv.invNo)); // keep invoices you created
+    const lib = SEED.map(seedToInvoice).concat(userAdded);
+    setLibrary(lib);
+    return lib;
+  }
+  return stored;
+}
+function setLibrary(lib){
+  try{ localStorage.setItem('invoiceLibrary',JSON.stringify(lib)); localStorage.setItem('invoiceLibraryVersion',String(SEED_VERSION)); }catch(e){}
+}
+function refreshDropdown(){
+  const lib = getLibrary().slice().reverse(); // newest first
+  const sel = document.getElementById('dupFrom');
+  sel.innerHTML = '<option value="">Duplicate from previous…</option>';
+  lib.forEach(inv=>{
+    const total = (inv.items||[]).reduce((a,i)=> a + (i.amount!=null&&i.amount!=='' ? parseNum(i.amount) : parseNum(i.qty)*parseNum(i.rate)),0);
+    const opt = document.createElement('option');
+    opt.value = inv.invNo;
+    opt.textContent = `${inv.invNo} — ${inv.client||'—'} — ${fmt(total, inv.currency)}`;
+    sel.appendChild(opt);
+  });
+}
+
+/* ---------- next invoice number (seq + 4-digit year, keeps your format) ---------- */
+function nextNumber(){
+  const year = String(new Date().getFullYear());
+  let max = 0;
+  getLibrary().forEach(inv=>{
+    const clean = String(inv.invNo).replace(/\*+$/,'');
+    const y = clean.slice(-4), seq = parseInt(clean.slice(0,-4),10);
+    if(y===year && isFinite(seq)) max = Math.max(max,seq);
+  });
+  return String(max+1).padStart(2,'0')+year;
+}
+
+/* ---------- rows ---------- */
+function rowHTML(desc='',amount=''){
+  const esc = s => String(s).replace(/"/g,'&quot;');
+  return `<tr>
+    <td><input class="f desc-main" placeholder="Item description" value="${esc(desc)}"></td>
+    <td class="num amtcell"><span class="cur-sym"></span><input class="f num amt" value="${esc(amount)}"></td>
+    <td><button class="row-del" title="Remove line" onclick="this.closest('tr').remove();recalc()">×</button></td>
+  </tr>`;
+}
+function addRow(desc,amount){
+  document.getElementById('itemsBody').insertAdjacentHTML('beforeend', rowHTML(desc,amount));
+  bindRows(); recalc();
+}
+function bindRows(){ document.querySelectorAll('#itemsBody input').forEach(inp=> inp.oninput=recalc); }
+function recalc(){
+  let sub=0;
+  document.querySelectorAll('#itemsBody tr').forEach(tr=>{ sub += parseNum(tr.querySelector('.amt').value); });
+  document.getElementById('grandTotal').textContent = money(sub);
+  applyCurrencySymbols();
+}
+
+/* ---------- read / write the whole form ---------- */
+function writeForm(inv, asNew){
+  document.getElementById('invNo').value    = asNew ? nextNumber() : (inv.invNo||'');
+  document.getElementById('issueDate').value= asNew ? today() : (inv.issueDate||today());
+  document.getElementById('dueDate').value  = asNew ? '' : (inv.dueDate||'');
+  if(asNew) dueFromIssue();                    // default due date = issue + 30 days (still editable)
+  document.getElementById('billName').textContent = inv.client||'Client name';
+  document.getElementById('billAddr').textContent = inv.billAddr||'';
+  document.getElementById('currency').value = inv.currency || 'EUR';
+  document.getElementById('payDetails').textContent = inv.payDetails || 'Bank / IBAN / BIC — enter payment details for this client';
+  document.getElementById('itemsBody').innerHTML='';
+  const items = (inv.items&&inv.items.length)?inv.items:[{desc:'',amount:''}];
+  items.forEach(i=>{
+    let amount = (i.amount!=null && i.amount!=='') ? i.amount
+               : (i.qty!=null||i.rate!=null ? (parseNum(i.qty)*parseNum(i.rate))||'' : '');
+    addRow(i.desc, amount);
+  });
+  recalc();
+  updateTitle();
+}
+function readForm(){
+  const items=[];
+  document.querySelectorAll('#itemsBody tr').forEach(tr=>{
+    items.push({desc:tr.querySelector('.desc-main').value, amount:tr.querySelector('.amt').value});
+  });
+  return {
+    invNo:document.getElementById('invNo').value.trim(),
+    client:document.getElementById('billName').textContent.trim(),
+    billAddr:document.getElementById('billAddr').textContent.trim(),
+    currency:document.getElementById('currency').value,
+    issueDate:document.getElementById('issueDate').value.trim(),
+    dueDate:document.getElementById('dueDate').value.trim(),
+    items,
+    payDetails:document.getElementById('payDetails').textContent.trim()
+  };
+}
+
+/* ---------- actions ---------- */
+function payDetailsForClient(client){
+  if(CLIENT_PAY[client]) return CLIENT_PAY[client];           // known client
+  const lib = getLibrary();                                   // else most recent saved invoice for this client
+  for(let i=lib.length-1;i>=0;i--){
+    if(lib[i].client===client && lib[i].payDetails && lib[i].payDetails.trim()) return lib[i].payDetails;
+  }
+  return '';
+}
+function duplicateFrom(invNo){
+  if(!invNo) return;
+  const src = getLibrary().find(x=>x.invNo===invNo);
+  if(src){
+    const inv = Object.assign({}, src);
+    if(!inv.payDetails || !inv.payDetails.trim()) inv.payDetails = payDetailsForClient(inv.client) || payFromAddress(inv.billAddr);
+    writeForm(inv, true);                        // load real data, new number + today's date
+  }
+  document.getElementById('dupFrom').value='';   // reset dropdown label
+}
+function saveInvoice(){
+  const inv = readForm();
+  if(!inv.invNo){ alert('Give the invoice a number before saving.'); return; }
+  const lib = getLibrary();
+  const idx = lib.findIndex(x=>x.invNo===inv.invNo);
+  if(idx>=0) lib[idx]=inv; else lib.push(inv);
+  setLibrary(lib); refreshDropdown();
+  alert('Invoice '+inv.invNo+' saved to your library. You can now duplicate it later.');
+}
+function blankInvoice(){
+  if(!confirm('Start a blank invoice? Your saved library and business details stay.')) return;
+  writeForm({client:'Client name', billAddr:'Client address\nCity, Postcode, Country',
+    currency:'EUR', items:[{desc:'',amount:''}]}, true);
+}
+
+/* ---------- business details persistence (separate from invoices) ---------- */
+function saveDetails(){
+  const data={};
+  document.querySelectorAll('[data-k]').forEach(el=> data[el.dataset.k]=el.innerHTML);
+  const img=document.getElementById('logoImg');
+  data.logo = (img.src && img.style.display!=='none') ? img.src : '';
+  try{ localStorage.setItem('invoiceDetails',JSON.stringify(data)); alert('Business details, payment info and logo saved on this computer.'); }
+  catch(e){ alert('Could not save (browser storage blocked).'); }
+}
+function loadDetails(){
+  let data; try{ data=JSON.parse(localStorage.getItem('invoiceDetails')||'{}'); }catch(e){ data={}; }
+  document.querySelectorAll('[data-k]').forEach(el=>{ if(data[el.dataset.k]!=null) el.innerHTML=data[el.dataset.k]; });
+  if(data.logo){ const img=document.getElementById('logoImg'); img.src=data.logo; img.style.display='inline-block'; }
+}
+
+document.getElementById('logoInput').addEventListener('change', e=>{
+  const file=e.target.files[0]; if(!file) return;
+  const r=new FileReader(); r.onload=ev=>{ const img=document.getElementById('logoImg'); img.src=ev.target.result; img.style.display='inline-block'; };
+  r.readAsDataURL(file);
+});
+function fmtDMY(d){ return String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+d.getFullYear(); }
+function parseDMY(s){ const m=String(s).trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/); return m ? new Date(+m[3],+m[2]-1,+m[1]) : null; }
+function today(){ return fmtDMY(new Date()); }
+function dueFromIssue(){ const d=parseDMY(document.getElementById('issueDate').value); if(d){ d.setDate(d.getDate()+30); document.getElementById('dueDate').value=fmtDMY(d); } }
+
+/* default PDF filename: Invoice_<number> */
+function invoiceFilename(){ const no=(document.getElementById('invNo').value||'').replace(/[^\w-]+/g,''); return 'Invoice_'+(no||'draft'); }
+function updateTitle(){ document.title = invoiceFilename(); }
+function exportPDF(){ updateTitle(); window.print(); }
+
+/* ---------- init ---------- */
+document.getElementById('issueDate').addEventListener('change', dueFromIssue); // re-derive due date when issue date changes
+document.getElementById('invNo').addEventListener('input', updateTitle);       // keep PDF filename in sync
+loadDetails();
+refreshDropdown();
+blankInvoiceInit();
+function blankInvoiceInit(){
+  writeForm({client:'Client name', billAddr:'Client address\nCity, Postcode, Country',
+    currency:'EUR',
+    items:[{desc:'White paper — research & drafting',amount:''},{desc:'',amount:''}]}, true);
+}
+</script>
+</body>
+</html>
